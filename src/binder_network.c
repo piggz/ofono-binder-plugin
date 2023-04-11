@@ -2109,10 +2109,11 @@ binder_network_watch_gprs_cb(
     const BinderDataProfileConfig* dpc = &self->data_profile_config;
 
     DBG_(self, "gprs %s", watch->gprs ? "appeared" : "is gone");
+
+    binder_network_check_initial_attach_apn(self);
     if (dpc->use_data_profiles) {
         binder_network_check_data_profiles(self);
     }
-    binder_network_check_initial_attach_apn(self);
 }
 
 static
@@ -2126,12 +2127,12 @@ binder_network_watch_gprs_settings_cb(
     BinderNetworkObject* self = THIS(user_data);
     const BinderDataProfileConfig* dpc = &self->data_profile_config;
 
-    if (dpc->use_data_profiles) {
-        binder_network_check_data_profiles(self);
-    }
-
     if (type == OFONO_GPRS_CONTEXT_TYPE_INTERNET) {
         binder_network_check_initial_attach_apn(self);
+    }
+
+    if (dpc->use_data_profiles) {
+        binder_network_check_data_profiles(self);
     }
 }
 
@@ -2215,10 +2216,10 @@ binder_network_new(
     self->set_initial_attach_apn = self->need_initial_attach_apn =
         binder_network_need_initial_attach_apn(self);
 
+    binder_network_try_set_initial_attach_apn(self);
     if (dpc->use_data_profiles) {
         binder_network_check_data_profiles(self);
     }
-    binder_network_try_set_initial_attach_apn(self);
     return net;
 }
 
