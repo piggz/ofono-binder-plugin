@@ -188,8 +188,7 @@ static const struct binder_access_mode_raf {
 } binder_access_mode_raf_map[] = {
     { OFONO_RADIO_ACCESS_MODE_GSM,  RAF_EDGE | RAF_GPRS | RAF_GSM },
     { OFONO_RADIO_ACCESS_MODE_UMTS, RAF_UMTS },
-    { OFONO_RADIO_ACCESS_MODE_LTE,  RAF_LTE | RAF_LTE_CA },
-    { OFONO_RADIO_ACCESS_MODE_NR,   RAF_NR }
+    { OFONO_RADIO_ACCESS_MODE_LTE,  RAF_LTE | RAF_LTE_CA }
 };
 
 static const BinderRadioCapsRequestTxPhase binder_radio_caps_tx_phase[] = {
