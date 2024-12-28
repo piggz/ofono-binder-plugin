@@ -44,6 +44,21 @@ struct ofono_network_operator;
 #define binder_error_sim(err,sw1,sw2) \
     (binder_error_init_sim_error(err,sw1,sw2), err)
 
+/* Internal extension for RADIO_PREF_NET_TYPE */
+typedef enum radio_pref_net_type_internal {
+    RADIO_PREF_NET_NR_ONLY = RADIO_PREF_NET_TD_SCDMA_LTE_CDMA_EVDO_GSM_WCDMA + 1,
+    RADIO_PREF_NET_NR_LTE,
+    RADIO_PREF_NET_NR_LTE_CDMA_EVDO,
+    RADIO_PREF_NET_NR_LTE_GSM_WCDMA,
+    RADIO_PREF_NET_NR_LTE_CDMA_EVDO_GSM_WCDMA,
+    RADIO_PREF_NET_NR_LTE_WCDMA,
+    RADIO_PREF_NET_NR_LTE_TD_SCDMA,
+    RADIO_PREF_NET_NR_LTE_TD_SCDMA_GSM,
+    RADIO_PREF_NET_NR_LTE_TD_SCDMA_WCDMA,
+    RADIO_PREF_NET_NR_LTE_TD_SCDMA_GSM_WCDMA,
+    RADIO_PREF_NET_NR_LTE_TD_SCDMA_CDMA_EVDO_GSM_WCDMA
+} RADIO_PREF_NET_TYPE_INTERNAL;
+
 RADIO_ACCESS_NETWORK
 binder_radio_access_network_for_tech(
     RADIO_TECH tech)
@@ -187,6 +202,11 @@ binder_read_hidl_string(
     const GBinderReader* args)
     BINDER_INTERNAL;
 
+char*
+binder_read_string16(
+    const GBinderReader* args)
+    BINDER_INTERNAL;
+
 gboolean
 binder_read_int32(
     const GBinderReader* args,
@@ -201,9 +221,29 @@ binder_read_hidl_struct1(
 #define binder_read_hidl_struct(reader,type) \
     ((const type*)binder_read_hidl_struct1(reader, sizeof(type)))
 
+const void*
+binder_read_parcelable(
+    const GBinderReader* reader,
+    gsize* out_size);
+
+gsize
+binder_read_parcelable_size(
+    GBinderReader* reader);
+
 char**
 binder_strv_from_hidl_string_vec(
     const GBinderHidlVec* vec)
+    BINDER_INTERNAL;
+
+char**
+binder_strv_from_string16_array(
+    GBinderReader* reader)
+    BINDER_INTERNAL;
+
+gboolean
+binder_read_string16_parse_int(
+    GBinderReader* reader,
+    gint32* value)
     BINDER_INTERNAL;
 
 guint

@@ -36,9 +36,11 @@ static const char PROTO_IPV4V6_STR[] = "IPV4V6";
 #define RADIO_ACCESS_FAMILY_GSM \
     (RAF_GSM|RAF_GPRS|RAF_EDGE)
 #define RADIO_ACCESS_FAMILY_UMTS \
-    (RAF_UMTS|RAF_HSDPA|RAF_HSUPA|RAF_HSPA|RAF_HSPAP|RAF_TD_SCDMA)
+    (RAF_UMTS|RAF_HSDPA|RAF_HSUPA|RAF_HSPA|RAF_HSPAP|RAF_TD_SCDMA|RAF_EHRPD)
 #define RADIO_ACCESS_FAMILY_LTE \
-    (RAF_LTE|RAF_LTE_CA)
+    (RAF_LTE|RAF_LTE_CA|RAF_EHRPD)
+#define RADIO_ACCESS_FAMILY_NR \
+    (RAF_NR)
 
 static
 const char*
@@ -80,6 +82,8 @@ binder_radio_access_network_for_tech(
         return RADIO_ACCESS_NETWORK_EUTRAN;
     case RADIO_TECH_IWLAN:
         return RADIO_ACCESS_NETWORK_IWLAN;
+    case RADIO_TECH_NR:
+        return RADIO_ACCESS_NETWORK_NGRAN;
     case RADIO_TECH_UNKNOWN:
         break;
     }
@@ -224,6 +228,9 @@ binder_pref_from_raf(
     if (raf & RADIO_ACCESS_FAMILY_GSM) {
         if (raf & RADIO_ACCESS_FAMILY_UMTS) {
             if (raf & RADIO_ACCESS_FAMILY_LTE) {
+                if (raf & RADIO_ACCESS_FAMILY_NR) {
+                    return RADIO_PREF_NET_NR_LTE_GSM_WCDMA;
+                }
                 return RADIO_PREF_NET_LTE_GSM_WCDMA;
             }
             return RADIO_PREF_NET_GSM_WCDMA;
@@ -231,11 +238,19 @@ binder_pref_from_raf(
         return RADIO_PREF_NET_GSM_ONLY;
     } else if (raf & RADIO_ACCESS_FAMILY_UMTS) {
         if (raf & RADIO_ACCESS_FAMILY_LTE) {
+            if (raf & RADIO_ACCESS_FAMILY_NR) {
+                return RADIO_PREF_NET_NR_LTE_WCDMA;
+            }
             return RADIO_PREF_NET_LTE_WCDMA;
         }
         return RADIO_PREF_NET_WCDMA;
     } else if (raf & RADIO_ACCESS_FAMILY_LTE) {
+        if (raf & RADIO_ACCESS_FAMILY_NR) {
+            return RADIO_PREF_NET_NR_LTE;
+        }
         return RADIO_PREF_NET_LTE_ONLY;
+    } else if (raf & RADIO_ACCESS_FAMILY_NR) {
+        return RADIO_PREF_NET_NR_ONLY;
     } else {
         return RADIO_PREF_NET_INVALID;
     }
@@ -248,7 +263,8 @@ binder_pref_mask(
     int none,
     int gsm_mask,
     int umts_mask,
-    int lte_mask)
+    int lte_mask,
+    int nr_mask)
 {
     switch (pref) {
     case RADIO_PREF_NET_GSM_ONLY:
@@ -262,6 +278,12 @@ binder_pref_mask(
     case RADIO_PREF_NET_LTE_ONLY:
     case RADIO_PREF_NET_LTE_CDMA_EVDO:
         return lte_mask;
+
+    case RADIO_PREF_NET_NR_ONLY:
+        return nr_mask;
+
+    case RADIO_PREF_NET_NR_LTE:
+        return lte_mask | nr_mask;
 
     case RADIO_PREF_NET_TD_SCDMA_GSM:
     case RADIO_PREF_NET_GSM_WCDMA:
@@ -283,6 +305,19 @@ binder_pref_mask(
     case RADIO_PREF_NET_TD_SCDMA_LTE_CDMA_EVDO_GSM_WCDMA:
         return gsm_mask | umts_mask | lte_mask;
 
+    case RADIO_PREF_NET_NR_LTE_CDMA_EVDO:
+    case RADIO_PREF_NET_NR_LTE_WCDMA:
+    case RADIO_PREF_NET_NR_LTE_TD_SCDMA:
+    case RADIO_PREF_NET_NR_LTE_TD_SCDMA_WCDMA:
+        return umts_mask | lte_mask | nr_mask;
+
+    case RADIO_PREF_NET_NR_LTE_GSM_WCDMA:
+    case RADIO_PREF_NET_NR_LTE_TD_SCDMA_GSM:
+    case RADIO_PREF_NET_NR_LTE_CDMA_EVDO_GSM_WCDMA:
+    case RADIO_PREF_NET_NR_LTE_TD_SCDMA_GSM_WCDMA:
+    case RADIO_PREF_NET_NR_LTE_TD_SCDMA_CDMA_EVDO_GSM_WCDMA:
+        return gsm_mask | umts_mask | lte_mask | nr_mask;
+
     case RADIO_PREF_NET_CDMA_ONLY:
     case RADIO_PREF_NET_EVDO_ONLY:
     case RADIO_PREF_NET_CDMA_EVDO_AUTO:
@@ -300,7 +335,7 @@ binder_raf_from_pref(
 {
     return binder_pref_mask(pref, RAF_NONE,
         RADIO_ACCESS_FAMILY_GSM, RADIO_ACCESS_FAMILY_UMTS,
-        RADIO_ACCESS_FAMILY_LTE);
+        RADIO_ACCESS_FAMILY_LTE, RADIO_ACCESS_FAMILY_NR);
 }
 
 enum ofono_radio_access_mode
@@ -309,7 +344,7 @@ binder_access_modes_from_pref(
 {
     return binder_pref_mask(pref, OFONO_RADIO_ACCESS_MODE_NONE,
         OFONO_RADIO_ACCESS_MODE_GSM, OFONO_RADIO_ACCESS_MODE_UMTS,
-        OFONO_RADIO_ACCESS_MODE_LTE);
+        OFONO_RADIO_ACCESS_MODE_LTE, OFONO_RADIO_ACCESS_MODE_NR);
 }
 
 enum ofono_radio_access_mode
@@ -330,6 +365,9 @@ binder_access_modes_from_raf(
        }
        if (raf & RADIO_ACCESS_FAMILY_LTE) {
            modes |= OFONO_RADIO_ACCESS_MODE_LTE;
+       }
+       if (raf & RADIO_ACCESS_FAMILY_NR) {
+           modes |= OFONO_RADIO_ACCESS_MODE_NR;
        }
        return modes;
     }
@@ -371,6 +409,8 @@ binder_access_tech_from_radio_tech(
     case RADIO_TECH_LTE:
     case RADIO_TECH_LTE_CA:
         return OFONO_ACCESS_TECHNOLOGY_EUTRAN;
+    case RADIO_TECH_NR:
+        return OFONO_ACCESS_TECHNOLOGY_NR_5GCN;
     case RADIO_TECH_IWLAN:
     case RADIO_TECH_IS95B:
     case RADIO_TECH_ONE_X_RTT:
@@ -410,6 +450,12 @@ binder_ofono_access_technology_string(
         return "utran";
     case OFONO_ACCESS_TECHNOLOGY_EUTRAN:
         return "eutran";
+    case OFONO_ACCESS_TECHNOLOGY_EUTRA_5GCN:
+        return "eutran";
+    case OFONO_ACCESS_TECHNOLOGY_NR_5GCN:
+    case OFONO_ACCESS_TECHNOLOGY_NG_RAN:
+    case OFONO_ACCESS_TECHNOLOGY_EUTRA_NR:
+        return "nr";
     }
     return binder_pool_string(g_strdup_printf("%d (?)", act));
 }
@@ -724,6 +770,17 @@ binder_read_hidl_string(
     return gbinder_reader_read_hidl_string_c(&reader);
 }
 
+char*
+binder_read_string16(
+    const GBinderReader* args)
+{
+    GBinderReader reader;
+
+    /* Read a single string arg */
+    gbinder_reader_copy(&reader, args);
+    return gbinder_reader_read_string16(&reader);
+}
+
 gboolean
 binder_read_int32(
     const GBinderReader* args,
@@ -748,6 +805,33 @@ binder_read_hidl_struct1(
     return gbinder_reader_read_hidl_struct1(&reader, size);
 }
 
+const void*
+binder_read_parcelable(
+    const GBinderReader* args,
+    gsize* out_size)
+{
+    GBinderReader reader;
+
+    /* Read a single AIDL parcelable */
+    gbinder_reader_copy(&reader, args);
+    return gbinder_reader_read_parcelable(&reader, out_size);
+}
+
+gsize
+binder_read_parcelable_size(
+    GBinderReader* reader)
+{
+    /* Read a single AIDL parcelable header and return inner data size */
+    guint32 non_null = 0, payload_size = 0;
+    if (gbinder_reader_read_uint32(reader, &non_null) && non_null &&
+        gbinder_reader_read_uint32(reader, &payload_size) &&
+        payload_size >= sizeof(payload_size)) {
+
+        return payload_size - sizeof(payload_size);
+    }
+    return 0;
+}
+
 char**
 binder_strv_from_hidl_string_vec(
     const GBinderHidlVec* vec)
@@ -762,6 +846,46 @@ binder_strv_from_hidl_string_vec(
             const char* str = strings[i].data.str;
 
             *ptr = str ? gutil_memdup(str, strings[i].len + 1) : g_strdup("");
+        }
+        *ptr = NULL;
+        return out;
+    }
+    return NULL;
+}
+
+gboolean
+binder_read_string16_parse_int(
+    GBinderReader* reader,
+    gint32* value)
+{
+    /* Read a string and parse integer value from it */
+    gboolean ret = FALSE;
+    char* str = gbinder_reader_read_string16(reader);
+
+    ret = gutil_parse_int(str, 10, value);
+    g_free(str);
+
+    return ret;
+}
+
+char**
+binder_strv_from_string16_array(
+    GBinderReader* reader)
+{
+    if (reader) {
+        gint32 count;
+        gbinder_reader_read_int32(reader, &count);
+        if (count < 0) {
+            count = 0;
+        }
+        char** out = g_new(char*, count + 1);
+        char** ptr = out;
+        guint i;
+
+        for (i = 0; i < count; i++, ptr++) {
+            char* str = gbinder_reader_read_string16(reader);
+
+            *ptr = str ? str : g_strdup("");
         }
         *ptr = NULL;
         return out;
